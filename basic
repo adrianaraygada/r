@@ -1,0 +1,84 @@
+################################################################
+#         INTRODUCTION TO R: N°1 (WORKING PROGRESS)           #
+################################################################
+
+#This is an RScript (or script). Here we write commands/"orders" that R interprets and excutes.
+#When we write something after "#" it means that is only text. This is very useful to write down your own thoughts or interpretations.
+
+#There are some commands that are very useful in R: 
+##help("command"): will give you information about the command: description, usage, arguments, details, value, references, examples, etc.
+
+### When working with R you need to download and install packages. The packages are extenstions to the R statistical programming language that contain code, data, and dcumentation in a standardised collection format that can be installed by users of R 
+#The most recommended packages are: base, compiler, datasets, grDevices, graphics, grid, methods, and others, clustger, foreign, lattice
+#Also it is increasingly popular: tidyverse and ggplot2. With tidyverse you can import data, clean, transform and visualice (is one of the most downloaded R packages) 
+
+#To install packages: 
+download.packages("tidyverse")
+install.packages("tidyverse") #allows you to import from different formats
+install.packages("manipulate")
+install.packages("haven") #allows to import .dta files
+install.packages("readxl") #alows to import .xls files
+install.packages("logr") #allows to log/record process
+install.packages("dplyr") #allows to reanme variables
+
+### When working with R you must create a Project in which you will have all the scripts related to that project, also you need to set your working directory.
+#When you set your directory, you call all your documents from that path and all your documents will be saved there.
+setwd("C://Users//user//Documents//Maestría//LUND//Econometrics I//Lab1")
+
+#You also use those paths to call data from different sources
+#When importing new data you have to assigned a name to the data. Usually can be the same name of the original file, but can change according the need. 
+lab1_2022 <- read_dta("C://Users//user//Documents//Maestría//LUND//Econometrics I//Lab1//lab1_2022.dta")
+
+##R works by writing: 
+#command(dataset) or 
+#command(dataset$variable) or 
+#command(dataset$variable, especification/option)
+#Is case sensitive (its easier if al dataset and variables are in lower case)
+
+### To EXPLORE your data in R, you can use the following commands: 
+dim(lab1_2022) #dimensions of the data set: number of cases and variables
+str(lab1_2022) # structure of the data 
+head(lab1_2022) # first 6 rows
+tail(lab1_2022) # last 6 rows
+summary(lab1_2022) #if variable is continuous it will bring: min, Q1, median, mean, Q3, MAX, NA 
+View(lab1_2022) # You will see the data base
+
+#We can do the same with variables (continuous): 
+summary(lab1_2022$age) #Here "summary" is the command, "lab1_2022" the dataset and "age" the variable we want to summarize
+
+#We can also see the list of cathegorical variables: 
+list(lab1_2002$var7)
+
+###TO LOG. It is a way to record what you have done. Later, when you run many regressions or cross-tabs, it is useful to just look in yout log the results
+#You need the logr package. The logr package helps create log files for R scripts. Useful when you want a written log of your program excecution
+
+lf <- log_open (tmp) #initiates the log
+log_print("hello") #print objects 
+sum <- summary(lab1_2022) 
+log_print(sum) #print objects
+log_close() #close the log
+writeLines(readLines(lf)) #view the log (the work done)
+
+###ORDER and SORT data. Sorts(order) a vector or factor into ascending or descending order. 
+#Gives as some vectors, but doesn't change the visualization of the data. 
+
+order(lab1_2022$labor_income) #cases in ascending order 
+sort(lab1_2022$labor_income, decreasing = TRUE) #income ammount in descending order
+sort(lab1_2022$labor_income) #income ammount in ascending order (by default)
+
+#We can search for specific cases
+list(lab1_2022$var7[35])
+kids <- lab1_2022$wife_present==0
+table(kids)
+
+###TO TABULATE 
+table(lab1_2022$wife_present)
+table(lab1_2022$labor_income, lab1_2022$wife_present)
+table(lab1_2022$education, lab1_2022$nr_of_kids)
+
+###TO RENAME VARIABLES AND CREATE LABELS
+#Dataset from other sources can be ambiguos or inconvenient, so it is useful to rename them into something easily to interpret
+
+################################################################
+#                MISSING INFO / INCOMPLETED                    #
+################################################################
