@@ -2,8 +2,8 @@
 #         INTRODUCTION TO R: N°1 (WORKING PROGRESS)           #
 ################################################################
 
-#This is an RScript (or script). Here we write commands/"orders" that R interprets and excutes.
-#When we write something after "#" it means that is only text. This is very useful to write down your own thoughts or interpretations.
+#This is an RScript (or script). Here we write commands/"orders" that R interprets and executes.
+#When we write something after "#" means that is only text. This is very useful to write down your own thoughts or interpretations.
 
 #There are some commands that are very useful in R: 
 ##help("command"): will give you information about the command: description, usage, arguments, details, value, references, examples, etc.
@@ -19,21 +19,34 @@ install.packages("manipulate")
 install.packages("haven") #allows to import .dta files
 install.packages("readxl") #alows to import .xls files
 install.packages("logr") #allows to log/record process
-install.packages("dplyr") #allows to reanme variables
+install.packages("dplyr") #allos to chang nams
+install.packages ("Hmisc") #allows to create labels 
 
-### When working with R you must create a Project in which you will have all the scripts related to that project, also you need to set your working directory.
-#When you set your directory, you call all your documents from that path and all your documents will be saved there.
+
+#Activate packages:
+library("tidyverse") #allows you to import from different formats
+library("manipulate")
+library("haven") #allows to import .dta files
+library("readxl") #alows to import .xls files
+library("logr") #allows to log/record process
+library("dplyr") #allows to change names 
+library("Hmisc") #allows to create labels 
+
+
+##R works by writing: 
+#command(dataset) or 
+#command(dataset$variable) or 
+#command(dataset$variable, especification/option)
+#Is case sensitive (its easier if all databases and variables are in lower case)
+
+### When working with R you must create a Project in which you will have all the scripts related to that project, also you need to SET YOUR WORKING DIRECTORY.
+#Setting the directory tells R in which folder on your computer your data is located and when your new data is going to be saved.
 setwd("C://Users//user//Documents//Maestría//LUND//Econometrics I//Lab1")
 
 #You also use those paths to call data from different sources
 #When importing new data you have to assigned a name to the data. Usually can be the same name of the original file, but can change according the need. 
 lab1_2022 <- read_dta("C://Users//user//Documents//Maestría//LUND//Econometrics I//Lab1//lab1_2022.dta")
 
-##R works by writing: 
-#command(dataset) or 
-#command(dataset$variable) or 
-#command(dataset$variable, especification/option)
-#Is case sensitive (its easier if al dataset and variables are in lower case)
 
 ### To EXPLORE your data in R, you can use the following commands: 
 dim(lab1_2022) #dimensions of the data set: number of cases and variables
@@ -45,12 +58,12 @@ View(lab1_2022) # You will see the data base
 
 #We can do the same with variables (continuous): 
 summary(lab1_2022$age) #Here "summary" is the command, "lab1_2022" the dataset and "age" the variable we want to summarize
-
+summary(lab1_2022)
 #We can also see the list of cathegorical variables: 
-list(lab1_2002$var7)
+list(lab1_2022$var7)
 
-###TO LOG. It is a way to record what you have done. Later, when you run many regressions or cross-tabs, it is useful to just look in yout log the results
-#You need the logr package. The logr package helps create log files for R scripts. Useful when you want a written log of your program excecution
+###TO LOG. It is a way to record what you have done. Later, when you run many regressions or cross-tabs, it is useful to just look in your log the results
+#You need the "logr" package, which helps to create log files for R scripts. Useful when you want a written log of your program execution
 
 lf <- log_open (tmp) #initiates the log
 log_print("hello") #print objects 
@@ -78,6 +91,58 @@ table(lab1_2022$education, lab1_2022$nr_of_kids)
 
 ###TO RENAME VARIABLES AND CREATE LABELS
 #Dataset from other sources can be ambiguos or inconvenient, so it is useful to rename them into something easily to interpret
+#newdataset <- command(dataset, new variable name = old variable name)
+
+lab1_2022 <- rename(lab1_2022, name=var7)
+
+#A label is a description to a variable (longer, it can have spaces)
+# command(dataset$variable) <- "label/description"
+label(lab1_2022$name) <- "First name of individual"
+
+#You can see the attributes of the data set: number of rows, names and class.
+attributes(lab1_2022)
+
+#You can see the type of the variable with the command typeof or mode
+#Modes have the same set of names as types, expect that
+#types "integer" and "double" are returned as "numeric".
+#types "special", "builtin" and "closure" are returned as "function".
+#type "symbol" is called mode "name".
+#type "language" is returned as "(" or "call")
+
+typeof(lab1_2022$wife_present)
+typeof(lab1_2022$education)
+typeof(lab1_2022$nr_of_kids)
+typeof(lab1_2022$home_owner)
+typeof(lab1_2022$name)
+typeof(lab1_2022$age)
+typeof(lab1_2022$test)
+typeof(lab1_2022$edu)
+
+mode(lab1_2022$wife_present)
+mode(lab1_2022$education)
+mode(lab1_2022$nr_of_kids)
+mode(lab1_2022$home_owner)
+mode(lab1_2022$name)
+mode(lab1_2022$age)
+mode(lab1_2022$test)
+mode(lab1_2022$edu)
+
+#But, to find out the distributions of the variable is better to us summary
+summary(lab1_2022)
+
+#ELIMINATING AND CREATING VARIABLES 
+#newdata = command(oldata, select =- c(variable you want to eliminate) 
+lab1_2022 = subset(lab1_2022, select = -c(test))
+
+#to crate a new variable we use dataset$new variable <- value assigned
+lab1_2022$test <- 1
+
+#to change the value of the variable 
+lab1_2022$test <- 2
+
+## CREATE A CATEGORICAL VARIABLE FROM CONTINUOS VARIABLE
+#If we want to change a continuous variable into a categorical variable, we have to do this: 
+
 
 ################################################################
 #                MISSING INFO / INCOMPLETED                    #
