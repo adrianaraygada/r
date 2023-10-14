@@ -1,0 +1,289 @@
+################################################################
+#             MACHINE LEARNING CON TIDIVERSE / R-Ladies        #
+################################################################
+
+# Machine learning: Cuando los algoritmos descubren patrones en conjuntos de datos (números, palabras, etc.). 
+# Todo lo que puede almacenarse digitalmente, puede usarse como datos para el ML. 
+# Basado en: https://github.com/fvillafuertech/meetup_rladies_tidymodels 
+# https://www.tidymodels.org/
+# https://www.youtube.com/@RLadiesLima
+
+###### TIDYMODELS ######
+# TIDYVERSE [permite importar, ordenar, transforma, visualizar] TIDYMODELS [permite modelar y compartir].
+# TIDYMODELS comprende una colección de librerías para modelamiento y machine learning, usando principios de tidyverse
+# Paquetes incluidos en tidymodels: rsample (muestreos), recipes (pre-procesamiento de datos), parsnip (modelos paramétricos y no paramétricos), yardstick (mide el rendimiento del modelo, precisión),
+# broom (ordena resultados que da un modelo), workflows (esencia de tidymodels, permite hacer un flujo de trabajo), tune (permite mejorar el modelo, interparámetros), dials (similar a tune)
+
+# PASOS: 1) Data exploration: Características de la data y relaciones entre variables > 2) Participación de los datos: Uno de modelo y uno de prueba (con rsamples)
+# > 3) Selección de variables que puedan aportar al modelo (con recipes, stepwise)  > 4) Model fitting, performance, evaluation
+# En este ejercicio se trabajará Tidymodels con SQL. 
+
+###### CASO EN TIDYMODELS ######
+# Se requiere instalar Rtools: https://cran.r-project.org/bin/windows/Rtools/rtools43/rtools.html
+# Para instalar varios paquetes a la vez
+install.packages(c("tidyverse", "ggplot2", "fastDummies", "tidymodels","vip", "skimr", "tidypredict", "ranger", "xgboost", "lightgbm"))
+
+## Para análisis exploratorio
+library(tidyverse)
+library(scales)
+library(fastDummies)
+
+## Para modelo predictivos
+library(tidymodels)
+library(vip)
+
+## Obtención de fórmula o reglas de modelo
+library(tidypredict)
+
+#Otros
+library(ggplot2)
+library(readr)
+library(dplyr)
+
+## Cargando datos, |> le aplico una función a lo que está en la derecha. 
+rstudioapi::documentPath() |> 
+  dirname() |> 
+  setwd()
+dataset_train <- read_csv("../Data/train.csv")
+
+## Calidad de datos. Permite saber el número de datos faltantes y el ratio de completitud de la variable (ej. Variable "Cabin" tiene 23%, por lo que le falta 77% de datos)
+dataset_train |> 
+  skimr::skim()
+
+### Análisis univariado
+
+dataset_train |> 
+  count(Survived) |> 
+  mutate(prop = n / sum(n), 
+         Survived = ifelse(Survived == 1, "Sí­", "No")) |> 
+  ggplot(aes(x = "", y = prop, fill = as.character(Survived))) + 
+  geom_col() + 
+  geom_text(aes(label = percent(prop, accuracy = 0.01)), 
+            position = position_stack(vjust = 0.5), 
+            color = "white") + 
+  coord_polar(theta = "y") + 
+  theme_void() + 
+  labs(title = "Casos de Supervivencia en el Titanic", 
+       fill = "Â¿SobreviviÃ³?") + 
+  scale_fill_manual(values = c("#f07167", "#0077b6")) + 
+  theme(legend.position = "bottom", 
+        plot.title = element_text(hjust = 0.5), 
+        plot.subtitle = element_text(hjust = 0.5))
+
+dataset_train |> 
+  count(Pclass) |> 
+  mutate(prop = n / sum(n), 
+         Pclass = glue::glue("Pclass {Pclass}"), 
+         ) |> 
+  ggplot(aes(Pclass, prop)) + 
+  geom_col(width = 0.4, 
+           fill = "#003566") + 
+  geom_text(aes(label = percent(prop)), 
+            vjust = -0.2) + 
+  labs(title = "DistribuciÃ³n de Personas segÃºn Clase de Ticket") + 
+  theme(axis.text.y = element_blank(), 
+        axis.title.y = element_blank())
+
+dataset_train |> 
+  count(Sex) |> 
+  mutate(prop = n / sum(n)) |> 
+  ggplot(aes(x = "", y = prop, fill = Sex)) + 
+  geom_col() + 
+  geom_text(aes(label = percent(prop)), 
+            position = position_stack(0.5), 
+            color = "white") + 
+  coord_polar(theta = "y") + 
+  labs(title = "DistribuciÃ³n de Pasajeros segÃºn el GÃ©nero") + 
+  theme_void() + 
+  scale_fill_manual(name = "GÃ©nero", 
+                    labels = c("Femenino", "Masculino"), 
+                    values = c("#f28482", "#003566")) + 
+  theme(legend.position = "bottom")
+
+dataset_train |> 
+  ggplot(aes(Age)) + 
+  geom_histogram(fill = "#5fa8d3") + 
+  geom_vline(aes(xintercept = mean(Age, na.rm = TRUE)), 
+             lty = 2, 
+             color = "firebrick") + 
+  labs(title = "DistribuciÃ³n de la Edad de los Pasajeros del Titanic", 
+       x = "Edad", 
+       caption = glue::glue("Nota:\nLa lÃ­nea roja representa la media de la edad que es {round(mean(dataset_train$Age, na.rm = TRUE), 2)}")) + 
+  theme(plot.caption = element_text(hjust = 0))
+
+dataset_train |> 
+  count(SibSp) |> 
+  ggplot(aes(as.character(SibSp), n)) + 
+  geom_col(fill = "#5fa8d3") + 
+  labs(title = "DistribuciÃ³n de Pasajeros segÃºn # de hermanos o cÃ³nyugues", 
+       x = "# de hermanos o cÃ³nyugues", 
+       y = "Cantidad de Pasajeros")
+
+dataset_train |> 
+  count(Parch) |> 
+  ggplot(aes(Parch, n)) + 
+  geom_col(fill = "#5fa8d3") + 
+  labs(title = "DistribuciÃ³n de Pasajares segÃºn # de padres/hijos a bordo del Titanic", 
+       x = "# de padres/hijos a bordo del Titanic", 
+       y = "Cantidad de Pasajeros")
+
+dataset_train |> 
+  ggplot(aes(Fare)) + 
+  geom_histogram(fill = "#5fa8d3") + 
+  geom_vline(aes(xintercept = median(Fare)), 
+             lty = 2, 
+             color = "firebrick") + 
+  labs(title = "DistribuciÃ³n de la Tarifa pagada por cada Pasajero", 
+       x = "Tarifa (Fare)", 
+       y = "Cantidad de Pasajeros", 
+       caption = glue::glue("Nota:\nLa el 50% de pasajero pagÃ³ hasta {round(median(dataset_train$Fare, na.rm = TRUE), 2)}"))
+
+dataset_train |> 
+  count(Embarked, sort = TRUE) |> 
+  mutate(prop = n / sum(n))
+
+
+### Análisis bivariado
+
+dataset_train |> 
+  ggplot(aes(Age, fill = as.character(Survived))) + 
+  geom_histogram(position = "identity", alpha = 0.5)
+
+dataset_train |> 
+  ggplot(aes(SibSp, fill = as.character(Survived))) + 
+  geom_histogram(position = "identity", alpha = 0.5)
+
+dataset_train |> 
+  ggplot(aes(Parch, fill = as.character(Survived))) + 
+  geom_histogram(position = "identity", alpha = 0.5)
+
+dataset_train |> 
+  ggplot(aes(Fare, fill = as.character(Survived))) + 
+  geom_histogram(position = "identity", alpha = 0.5)
+
+dataset_train |> 
+  ggplot(aes(Fare, fill = as.character(Survived))) + 
+  geom_histogram(position = "identity", alpha = 0.5) + 
+  scale_x_continuous(trans = "log10")
+
+dataset_train |> 
+  select_if(is.numeric) |> 
+  select(-PassengerId, -Survived) |> 
+  GGally::ggpairs()
+
+dataset_train |> 
+  select(is.numeric) |> 
+  select(-PassengerId, -Survived) |> 
+  na.omit() |>
+  cor(method = "spearman") |> 
+  as.data.frame() |> 
+  rownames_to_column("V1") |> 
+  pivot_longer(cols = -V1, 
+               names_to = "V2", 
+               values_to = "cor") |> 
+  ggplot(aes(V1, V2, fill = cor)) + 
+  geom_tile() + 
+  geom_text(aes(label = round(cor, 2))) + 
+  scale_fill_gradient2(low = "steelblue", 
+                       mid = "white", 
+                       high = "firebrick", 
+                       limits = c(-1, 1)) + 
+  theme(legend.position = "bottom", 
+        axis.title = element_blank(), 
+        axis.ticks = element_blank(), 
+        panel.border = element_blank())
+
+## Preparación de datos
+
+set.seed(42)
+dataset_train_p <- dataset_train |> 
+  mutate(Survived = factor(Survived, levels = c("0", "1"), labels = c("0", "1"))) |> 
+  select(-PassengerId) |> 
+  mutate(Age = replace_na(Age, median(Age, na.rm = TRUE)), 
+         Embarked = replace_na(Embarked, DescTools::Mode(Embarked, na.rm = TRUE))) |> 
+  select(-Cabin, -Ticket) |> 
+  dummy_cols(select_columns = c("Sex", "Embarked"), 
+             remove_first_dummy = TRUE, 
+             remove_selected_columns = TRUE)
+
+particion_inicial <- initial_split(dataset_train_p, prop = 0.8, strata = "Survived")
+dfTrain <- training(particion_inicial)
+dfTest <- testing(particion_inicial)
+
+## Modelamiento
+
+specRf <- rand_forest(trees = 100) |> 
+  set_engine("ranger", importance = "impurity") |> 
+  set_mode("classification")
+
+wfRf <- workflow() |> 
+  add_formula(as.formula("Survived ~ .")) |> 
+  add_model(specRf)
+
+# Ajusta la partición train que hice
+# El workflow yafue entreado.
+fitRf <- wfRf |> 
+  fit(dfTrain)
+
+# Se extrae el modelo (sin worfklow)
+# Con fit, se ve la importancia de variables (el género era más importante)
+fitRf |> 
+  extract_fit_engine() |> 
+  vip() + 
+  labs(title = "Importancia de Variables")
+
+# Me da clases de unos y ceros sobre si sobrevivió o no sobrevivió. 
+# Tengo clases predichas y las reales. Se observa que el modelo no es perfecto. 
+dfPredict <- fitRf |> 
+  predict(dfTest) |> 
+  mutate(real = dfTest$Survived)
+
+#La matriz de conusión brinda 79% precisión.
+caret::confusionMatrix(dfPredict$.pred_class, dfPredict$real)
+
+dfPredictTrain <- fitRf |> 
+  predict(dfTrain) |> 
+  mutate(real = dfTrain$Survived)
+
+caret::confusionMatrix(dfPredictTrain$.pred_class, dfPredictTrain$real)
+
+## Traducción a SQL
+
+### Conexión a SQL Local (Simulado)
+# Si queremos ponerlo en producción en un ambiente SQL.
+# Con la librery DBI me conecto directamente a una base de datos simulada. 
+# install.packages("RSQLite")
+library(DBI)
+
+con <- dbConnect(RSQLite::SQLite(), dbname = ":memory:")
+
+### Escritura de dataset en base de datos
+dbWriteTable(con, "titanic", dataset_train_p)
+
+#Extrae el modelo puro.
+modelo_final <- extract_fit_engine(fitRf)
+
+#La funsión parse_model va a permitir analizar las reglas (se demora en cargar)
+modelo_analizado <- parse_model(modelo_final)
+
+modelo_interpretado <- tidypredict_sql(model = modelo_analizado, 
+                                       con = con)
+
+modelo_interpretado[[1]]
+
+query <- glue::glue(
+          "SELECT 
+              *, 
+              {modelo_interpretado[[1]]} AS PREDICCION
+           FROM titanic")
+
+
+dfPredict <- tbl(con, sql(query)) |> 
+  collect() |> 
+  mutate(Survived = factor(Survived, levels = c("0", "1"), labels = c("0", "1")), 
+         PREDICCION = factor(PREDICCION, levels = c("0", "1"), labels = c("0", "1")))
+
+caret::confusionMatrix(dfPredict$PREDICCION, dfPredict$Survived)
+
+# Si se trabaja con millones de casos, puede que la computadora no soporte, requeriría de la arquitectura de la base. 
+# Podría trabajarse en la nube. 
